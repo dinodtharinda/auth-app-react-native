@@ -7,7 +7,12 @@ import SignupScreen from "./screens/SignupScreen";
 import WelcomeScreen from "./screens/WelcomeScreen";
 import { Colors } from "./constants/styles";
 import AuthContextProvider, { AuthContext } from "./store/auth-context";
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
+
+import IconButton from "./components/ui/IconButton";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+// import AppLoading from "expo-app-loading";
+import * as SplashScreen from 'expo-splash-screen'
 
 const Stack = createNativeStackNavigator();
 
@@ -27,6 +32,7 @@ function AuthStack() {
 }
 
 function AuthenticatedStack() {
+  const authCtx = useContext(AuthContext);
   return (
     <Stack.Navigator
       screenOptions={{
@@ -35,7 +41,20 @@ function AuthenticatedStack() {
         contentStyle: { backgroundColor: Colors.primary100 },
       }}
     >
-      <Stack.Screen name="Welcome" component={WelcomeScreen} />
+      <Stack.Screen
+        name="Welcome"
+        component={WelcomeScreen}
+        options={{
+          headerRight: ({ tintColor }) => (
+            <IconButton
+              color={tintColor}
+              size={24}
+              icon="exit"
+              onPress={authCtx.logout}
+            />
+          ),
+        }}
+      />
     </Stack.Navigator>
   );
 }
@@ -49,13 +68,39 @@ function Navigation() {
     </NavigationContainer>
   );
 }
+SplashScreen.preventAutoHideAsync();
+function Root() {
+  const [isTryingLogin, setIsTryingLogin] = useState(true);
+  const authCtx = useContext(AuthContext);
+  useEffect(() => {
+    async function fetchToken() {
+      const storedToken = await AsyncStorage.getItem("token");
+
+      if (storedToken) {
+        // setAuthToken(storedToken);
+        authCtx.authenticate(storedToken);
+      }
+      setIsTryingLogin(false);
+      SplashScreen.hideAsync();
+    }
+
+    fetchToken();
+  }, []);
+
+  // if (isTryingLogin) {
+  //   // return <AppLoading />;
+  //   return <SplashScreen/>
+  // }
+
+  return <Navigation />;
+}
 
 export default function App() {
   return (
     <>
       <StatusBar style="light" />
       <AuthContextProvider>
-        <Navigation />
+        <Root />
       </AuthContextProvider>
     </>
   );
